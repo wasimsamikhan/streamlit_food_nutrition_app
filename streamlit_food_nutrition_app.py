@@ -11,7 +11,7 @@ st.title('Food code → Nutrition mapper')
 
 st.markdown(
     """Upload a CSV with 3 columns: **ID**, **Food code**, **Grams eaten**.\
-    The app will use the nutrition mapping Excel file you also uploaded into Streamlit (per 100 g values)
+    The app will use the nutrition mapping Excel file you also uploaded (per 100 g values)
     to compute nutrition per person."""
 )
 
@@ -39,14 +39,17 @@ if cons_file is not None:
     st.write('Preview (first 10 rows):')
     st.dataframe(cons_df.head(10))
 
-# --- Upload the nutrition mapping Excel (permanent requirement in Streamlit Cloud) ---
+# --- Upload the nutrition mapping Excel ---
 st.header('2) Nutrition mapping Excel (upload once)')
 map_file = st.file_uploader('Upload the nutrition Excel file (per 100 g values)', type=['xlsx','xls'], key='map')
 
 mapping_df = None
 if map_file is not None:
     try:
-        mapping_df = pd.read_excel(map_file)
+        mapping_df = pd.read_excel(map_file, header=0)
+        # Drop empty columns (like the 3rd one in your file)
+        mapping_df = mapping_df.dropna(axis=1, how='all')
+        # Ensure only numeric columns (besides code and name) are kept as nutrition columns
         st.success('Nutrition mapping loaded successfully (values per 100 g)')
         st.write('Preview of nutrition mapping (first 10 rows):')
         st.dataframe(mapping_df.head(10))
@@ -63,11 +66,12 @@ else:
     id_col = code_col = grams_col = None
 
 if mapping_df is not None:
-    map_code_col = st.selectbox('Food code column (mapping file)', options=list(mapping_df.columns), index=0)
-    numeric_cols = mapping_df.select_dtypes(include='number').columns.tolist()
-    numeric_cols = [c for c in numeric_cols if c != map_code_col]
-    st.write('Detected numeric nutrition columns (per 100 g). Choose which to include in the output:')
-    chosen_nutrition_cols = st.multiselect('Nutrition columns to use (per 100 g)', options=numeric_cols, default=numeric_cols)
+    # First column is food code, second column is food name
+    map_code_col = mapping_df.columns[0]
+    food_name_col = mapping_df.columns[1]
+    # All remaining columns after the first two are nutrition columns (ignore blanks already dropped)
+    chosen_nutrition_cols = list(mapping_df.columns[2:])
+    st.write('Detected nutrition columns (per 100 g):', chosen_nutrition_cols)
 else:
     map_code_col = None
     chosen_nutrition_cols = []
@@ -80,7 +84,7 @@ if st.button('Compute results'):
     elif mapping_df is None:
         st.error('Please upload the nutrition mapping Excel file.')
     elif not chosen_nutrition_cols:
-        st.error('Please select at least one nutrition column from the mapping file.')
+        st.error('No nutrition columns detected in mapping file.')
     else:
         cons = cons_df.copy()
         cons[grams_col] = pd.to_numeric(cons[grams_col].astype(str).str.replace(',',''), errors='coerce')
@@ -122,4 +126,4 @@ if st.button('Compute results'):
             st.dataframe(merged.head(500))
 
 st.markdown('---')
-st.caption('This app expects you to upload both: (1) a consumption CSV and (2) the nutrition Excel file (per 100 g values). It then calculates per-person totals.')
+st.caption('This app expects you to upload both: (1) a consumption CSV and (2) the nutrition Excel file (per 100 g values). It then calculates per-person totals. The Excel format: col1=food code, col2=food name, col3 empty, col4+ = numeric nutrients per 100g.')
