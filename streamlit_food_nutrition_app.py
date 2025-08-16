@@ -49,7 +49,9 @@ if map_file is not None:
         mapping_df = pd.read_excel(map_file, header=0)
         # Drop empty columns (like the 3rd one in your file)
         mapping_df = mapping_df.dropna(axis=1, how='all')
-        # Ensure only numeric columns (besides code and name) are kept as nutrition columns
+        # Ensure numeric conversion for nutrient columns
+        for col in mapping_df.columns[3:]:
+            mapping_df[col] = pd.to_numeric(mapping_df[col], errors='coerce').fillna(0)
         st.success('Nutrition mapping loaded successfully (values per 100 g)')
         st.write('Preview of nutrition mapping (first 10 rows):')
         st.dataframe(mapping_df.head(10))
@@ -66,11 +68,11 @@ else:
     id_col = code_col = grams_col = None
 
 if mapping_df is not None:
-    # First column is food code, second column is food name
+    # First column is food code, second column is food name, third is empty
     map_code_col = mapping_df.columns[0]
     food_name_col = mapping_df.columns[1]
-    # All remaining columns after the first two are nutrition columns (ignore blanks already dropped)
-    chosen_nutrition_cols = list(mapping_df.columns[2:])
+    # All remaining columns after the first three are nutrition columns
+    chosen_nutrition_cols = list(mapping_df.columns[3:])
     st.write('Detected nutrition columns (per 100 g):', chosen_nutrition_cols)
 else:
     map_code_col = None
@@ -104,7 +106,7 @@ if st.button('Compute results'):
             st.warning(f'{n_missing} consumption rows could not be matched to any food code in the mapping file. They will have NaNs for nutrition values.')
 
         for col in chosen_nutrition_cols:
-            merged[col + '_for_grams'] = (merged[grams_col].astype(float) / 100.0) * merged[col]
+            merged[col + '_for_grams'] = (merged[grams_col].astype(float) / 100.0) * merged[col].astype(float)
 
         agg_cols = [c + '_for_grams' for c in chosen_nutrition_cols]
         result = merged.groupby(id_col)[agg_cols].sum().reset_index()
