@@ -42,7 +42,7 @@ if cons_file is not None:
 # --- Load the nutrition mapping Excel from GitHub ---
 st.header('2) Nutrition mapping (loaded automatically from GitHub)')
 
-mapping_url = "https://github.com/your-username/your-repo/raw/main/Food%20and%20Nutrition.xlsx"
+mapping_url = "https://github.com/wasimsamikhan/streamlit_food_nutrition_app/raw/main/Food%20and%20Nutrition.xlsx"
 mapping_df = None
 try:
     mapping_df = pd.read_excel(mapping_url, header=0)
