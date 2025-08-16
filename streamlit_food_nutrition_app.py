@@ -11,7 +11,7 @@ st.title('Food code → Nutrition mapper')
 
 st.markdown(
     """Upload a CSV with 3 columns: **ID**, **Food code**, **Grams eaten**.\
-    The app will use the nutrition mapping Excel file you also uploaded (per 100 g values)
+    The app will automatically use the nutrition mapping Excel file stored in the GitHub repo (per 100 g values)
     to compute nutrition per person."""
 )
 
@@ -39,24 +39,23 @@ if cons_file is not None:
     st.write('Preview (first 10 rows):')
     st.dataframe(cons_df.head(10))
 
-# --- Upload the nutrition mapping Excel ---
-st.header('2) Nutrition mapping Excel (upload once)')
-map_file = st.file_uploader('Upload the nutrition Excel file (per 100 g values)', type=['xlsx','xls'], key='map')
+# --- Load the nutrition mapping Excel from GitHub ---
+st.header('2) Nutrition mapping (loaded automatically from GitHub)')
 
+mapping_url = "https://github.com/your-username/your-repo/raw/main/Food%20and%20Nutrition.xlsx"
 mapping_df = None
-if map_file is not None:
-    try:
-        mapping_df = pd.read_excel(map_file, header=0)
-        # Drop empty columns (like the 3rd one in your file)
-        mapping_df = mapping_df.dropna(axis=1, how='all')
-        # Ensure numeric conversion for nutrient columns
-        for col in mapping_df.columns[3:]:
-            mapping_df[col] = pd.to_numeric(mapping_df[col], errors='coerce').fillna(0)
-        st.success('Nutrition mapping loaded successfully (values per 100 g)')
-        st.write('Preview of nutrition mapping (first 10 rows):')
-        st.dataframe(mapping_df.head(10))
-    except Exception as e:
-        st.error('Failed to read the nutrition mapping Excel: ' + str(e))
+try:
+    mapping_df = pd.read_excel(mapping_url, header=0)
+    # Drop empty columns (like the 3rd one in your file)
+    mapping_df = mapping_df.dropna(axis=1, how='all')
+    # Ensure numeric conversion for nutrient columns
+    for col in mapping_df.columns[3:]:
+        mapping_df[col] = pd.to_numeric(mapping_df[col], errors='coerce').fillna(0)
+    st.success('Nutrition mapping loaded successfully (values per 100 g)')
+    st.write('Preview of nutrition mapping (first 10 rows):')
+    st.dataframe(mapping_df.head(10))
+except Exception as e:
+    st.error('Failed to read the nutrition mapping Excel from GitHub: ' + str(e))
 
 # --- Column mapping for consumption and mapping files ---
 st.header('3) Map columns (auto-detected; you can override)')
@@ -84,7 +83,7 @@ if st.button('Compute results'):
     if cons_df is None:
         st.error('Please upload the consumption CSV first.')
     elif mapping_df is None:
-        st.error('Please upload the nutrition mapping Excel file.')
+        st.error('Could not load the nutrition mapping Excel from GitHub.')
     elif not chosen_nutrition_cols:
         st.error('No nutrition columns detected in mapping file.')
     else:
@@ -128,4 +127,4 @@ if st.button('Compute results'):
             st.dataframe(merged.head(500))
 
 st.markdown('---')
-st.caption('This app expects you to upload both: (1) a consumption CSV and (2) the nutrition Excel file (per 100 g values). It then calculates per-person totals. The Excel format: col1=food code, col2=food name, col3 empty, col4+ = numeric nutrients per 100g.')
+st.caption('This app expects you to upload (1) a consumption CSV. The nutrition Excel file is loaded automatically from GitHub (per 100 g values). Excel format: col1=food code, col2=food name, col3 empty, col4+ = numeric nutrients per 100g.')
