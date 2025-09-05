@@ -44,7 +44,7 @@ if cons_file is not None:
 st.header('2) Nutrition mapping (loaded automatically from GitHub)')
 
 # Replace with the *raw* GitHub URL of your file (not the repo page link)
-mapping_url = "https://raw.githubusercontent.com/your-username/your-repo/main/Food%20and%20Nutrition.xlsx"
+mapping_url = "https://raw.githubusercontent.com/wasimsamikhan/streamlit_food_nutrition_app/main/Food%20and%20Nutrition.xlsx"
 mapping_df = None
 try:
     mapping_df = pd.read_excel(mapping_url, header=0)
