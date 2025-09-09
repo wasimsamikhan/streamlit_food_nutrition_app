@@ -1,4 +1,4 @@
-# Streamlit app: Wide-format food data → Nutrition mapping and totals (Household & Person-wise)
+# Streamlit app: Wide-format food data → Nutrition mapping and totals (with manual column selection)
 # Save this file as streamlit_food_nutrition_app.py and run with:
 # pip install streamlit pandas openpyxl
 # streamlit run streamlit_food_nutrition_app.py
@@ -10,12 +10,12 @@ st.set_page_config(page_title='Wide → Nutrition Mapper', layout='wide')
 st.title('Wide-format Food Data → Nutrition Mapper')
 
 st.markdown("""
-Upload your **wide-format CSV** where each food_code column is followed by a grams column.
+Upload your **wide-format CSV** where each food_code column is followed by its quantity column.
 Example:
 ```
-household_id, person_id, food_code1, grams1, food_code2, grams2
-1, 1, 30, 100, 247, 60
-1, 2, 101, 200, 247, 80
+Household, Person_id, food_code1, quantity, food_code2, quantity
+1, 1, 30, 100, 234, 78
+1, 2, 251, 60, 145, 58
 ```
 """)
 
@@ -31,9 +31,20 @@ if cons_file:
 else:
     df_wide = None
 
+# --- Select key columns ---
+if df_wide is not None:
+    st.header('2) Select household, person, food, and quantity columns')
+    all_columns = df_wide.columns.tolist()
+
+    household_col = st.selectbox('Select household column', options=all_columns)
+    person_col = st.selectbox('Select person column', options=all_columns)
+
+    food_cols = st.multiselect('Select all food code columns', options=all_columns)
+    qty_cols = st.multiselect('Select all quantity columns (in same order as food codes)', options=all_columns)
+
 # --- Load nutrition mapping from GitHub ---
-st.header('2) Nutrition mapping (Excel from GitHub)')
-mapping_url = "https://github.com/wasimsamikhan/streamlit_food_nutrition_app/raw/main/Food%20and%20Nutrition.xlsx"
+st.header('3) Nutrition mapping (Excel from GitHub)')
+mapping_url = "https://github.com/your-username/your-repo/raw/main/Food%20and%20Nutrition.xlsx"
 
 try:
     mapping_df = pd.read_excel(mapping_url, header=0)
@@ -46,49 +57,41 @@ except Exception as e:
     mapping_df = None
 
 # --- Convert wide to long format ---
-st.header('3) Convert to long format')
-if df_wide is not None:
-    columns = df_wide.columns.tolist()
-    household_col = 'household_id'
-    person_col = 'person_id'
-    food_cols = [col for col in columns if 'food_code' in col.lower()]
-
-    long_data = []
-    for _, row in df_wide.iterrows():
-        household = row[household_col]
-        person = row[person_col]
-        for food_col in food_cols:
-            num = ''.join(filter(str.isdigit, food_col))
-            grams_col = f'grams{num}'
-            if grams_col in columns and pd.notna(row[food_col]) and pd.notna(row[grams_col]):
-                long_data.append({
-                    'household_id': household,
-                    'person_id': person,
-                    'food_code': row[food_col],
-                    'grams': row[grams_col]
-                })
-
-    df_long = pd.DataFrame(long_data)
-    st.success(f'Converted to long format with {len(df_long)} rows')
-    st.dataframe(df_long.head(20))
-else:
-    df_long = None
+st.header('4) Convert to long format')
+df_long = None
+if df_wide is not None and food_cols and qty_cols:
+    if len(food_cols) != len(qty_cols):
+        st.error('Number of food code columns must match number of quantity columns!')
+    else:
+        long_data = []
+        for _, row in df_wide.iterrows():
+            household = row[household_col]
+            person = row[person_col]
+            for f_col, q_col in zip(food_cols, qty_cols):
+                if pd.notna(row[f_col]) and pd.notna(row[q_col]):
+                    long_data.append({
+                        'household_id': household,
+                        'person_id': person,
+                        'food_code': row[f_col],
+                        'grams': row[q_col]
+                    })
+        df_long = pd.DataFrame(long_data)
+        st.success(f'Converted to long format with {len(df_long)} rows')
+        st.dataframe(df_long.head(20))
 
 # --- Process and compute ---
-st.header('4) Compute household & person-wise nutrition totals')
+st.header('5) Compute household & person-wise nutrition totals')
 if st.button('Compute results'):
     if df_long is None:
-        st.error('Please upload your wide-format CSV first.')
+        st.error('Please complete previous steps first.')
     elif mapping_df is None:
         st.error('Nutrition mapping file not loaded.')
     else:
-        # Identify columns in mapping file
         map_code_col = mapping_df.columns[0]
         food_name_en_col = mapping_df.columns[1]
-        food_name_bn_col = mapping_df.columns[2]  # Translation column
+        food_name_bn_col = mapping_df.columns[2]
         nutrient_cols = mapping_df.columns[3:]
 
-        # Merge
         df_long['food_code'] = df_long['food_code'].astype(str).str.strip()
         mapping_df[map_code_col] = mapping_df[map_code_col].astype(str).str.strip()
 
@@ -100,10 +103,10 @@ if st.button('Compute results'):
         for col in nutrient_cols:
             merged[col] = (merged['grams'].astype(float) / 100.0) * merged[col].astype(float)
 
-        # --- 1) Household-level totals (no person ID) ---
+        # --- Household-level totals ---
         household_totals = merged.groupby(['household_id', food_name_bn_col, food_name_en_col])[[*nutrient_cols]].sum().reset_index()
 
-        # --- 2) Person-level totals (no household ID) ---
+        # --- Person-level totals ---
         person_totals = merged.groupby(['person_id', food_name_bn_col, food_name_en_col])[[*nutrient_cols]].sum().reset_index()
 
         st.subheader('Household-level totals')
@@ -121,4 +124,4 @@ if st.button('Compute results'):
         st.download_button('Download Person-level CSV',
                            data=person_csv, file_name='person_totals.csv', mime='text/csv')
 
-st.caption('This app converts wide-format food data to long format, maps it to nutrition data, and outputs two CSVs: household-level totals (with Bengali & English names) and person-level totals.')
+st.caption('This app converts wide-format food data to long format, lets you select the relevant columns, and outputs two CSVs: household-level totals and person-level totals.')
