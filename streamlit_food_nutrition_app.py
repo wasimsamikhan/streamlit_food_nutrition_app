@@ -44,7 +44,7 @@ if df_wide is not None:
 
 # --- Load nutrition mapping from GitHub ---
 st.header('3) Nutrition mapping (Excel from GitHub)')
-mapping_url = "https://github.com/your-username/your-repo/raw/main/Food%20and%20Nutrition.xlsx"
+mapping_url = "https://github.com/wasimsamikhan/streamlit_food_nutrition_app/raw/main/Food%20and%20Nutrition.xlsx"
 
 try:
     mapping_df = pd.read_excel(mapping_url, header=0)
