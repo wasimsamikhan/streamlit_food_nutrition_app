@@ -1,5 +1,5 @@
-# Streamlit app: Wide-format food data → Nutrition mapping and totals (with manual column selection)
-# Save this file as streamlit_food_nutrition_app.py and run with:
+# Streamlit app: Wide-format food data → Nutrition mapping and totals
+# Save as streamlit_food_nutrition_app.py and run with:
 # pip install streamlit pandas openpyxl
 # streamlit run streamlit_food_nutrition_app.py
 
@@ -68,14 +68,26 @@ if df_wide is not None and food_cols and qty_cols:
             household = row[household_col]
             person = row[person_col]
             for f_col, q_col in zip(food_cols, qty_cols):
-                if pd.notna(row[f_col]) and pd.notna(row[q_col]):
-                    long_data.append({
-                        'household_id': household,
-                        'person_id': person,
-                        'food_code': row[f_col],
-                        'grams': row[q_col]
-                    })
+                food_code = row[f_col]
+                grams = row[q_col]
+
+                # Handle missing/empty values → set to 0
+                if pd.isna(food_code) or pd.isna(grams):
+                    food_code = 0
+                    grams = 0
+
+                long_data.append({
+                    'household_id': household,
+                    'person_id': person,
+                    'food_code': int(food_code),
+                    'grams': float(grams)
+                })
+
         df_long = pd.DataFrame(long_data)
+
+        # Drop dummy "0" food codes
+        df_long = df_long[df_long['food_code'] != 0]
+
         st.success(f'Converted to long format with {len(df_long)} rows')
         st.dataframe(df_long.head(20))
 
@@ -95,19 +107,21 @@ if st.button('Compute results'):
         df_long['food_code'] = df_long['food_code'].astype(str).str.strip()
         mapping_df[map_code_col] = mapping_df[map_code_col].astype(str).str.strip()
 
-        merged = pd.merge(df_long,
-                          mapping_df[[map_code_col, food_name_en_col, food_name_bn_col] + list(nutrient_cols)],
-                          left_on='food_code', right_on=map_code_col, how='left')
+        merged = pd.merge(
+            df_long,
+            mapping_df[[map_code_col, food_name_en_col, food_name_bn_col] + list(nutrient_cols)],
+            left_on='food_code', right_on=map_code_col, how='left'
+        )
 
         # Calculate nutrient intake per row
         for col in nutrient_cols:
             merged[col] = (merged['grams'].astype(float) / 100.0) * merged[col].astype(float)
 
         # --- Household-level totals ---
-        household_totals = merged.groupby(['household_id', food_name_bn_col, food_name_en_col])[[*nutrient_cols]].sum().reset_index()
+        household_totals = merged.groupby(['household_id', food_name_bn_col, food_name_en_col])[nutrient_cols].sum().reset_index()
 
         # --- Person-level totals ---
-        person_totals = merged.groupby(['person_id', food_name_bn_col, food_name_en_col])[[*nutrient_cols]].sum().reset_index()
+        person_totals = merged.groupby(['person_id', food_name_bn_col, food_name_en_col])[nutrient_cols].sum().reset_index()
 
         st.subheader('Household-level totals')
         st.dataframe(household_totals.head(50))
@@ -119,9 +133,7 @@ if st.button('Compute results'):
         household_csv = household_totals.to_csv(index=False).encode('utf-8')
         person_csv = person_totals.to_csv(index=False).encode('utf-8')
 
-        st.download_button('Download Household-level CSV',
-                           data=household_csv, file_name='household_totals.csv', mime='text/csv')
-        st.download_button('Download Person-level CSV',
-                           data=person_csv, file_name='person_totals.csv', mime='text/csv')
+        st.download_button('Download Household-level CSV', data=household_csv, file_name='household_totals.csv', mime='text/csv')
+        st.download_button('Download Person-level CSV', data=person_csv, file_name='person_totals.csv', mime='text/csv')
 
-st.caption('This app converts wide-format food data to long format, lets you select the relevant columns, and outputs two CSVs: household-level totals and person-level totals.')
+st.caption('This app converts wide-format food data to long format, handles missing codes as 0 (ignored), and outputs two CSVs: household-level totals and person-level totals.')
