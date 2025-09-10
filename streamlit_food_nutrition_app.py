@@ -19,6 +19,8 @@ Household, Person_id, food_code1, quantity, food_code2, quantity
 ```
 """)
 
+""")
+
 # --- Upload wide-format CSV ---
 st.header('1) Upload wide-format consumption CSV')
 cons_file = st.file_uploader('Upload your CSV', type=['csv'])
@@ -117,23 +119,49 @@ if st.button('Compute results'):
         for col in nutrient_cols:
             merged[col] = (merged['grams'].astype(float) / 100.0) * merged[col].astype(float)
 
-        # --- Household-level totals ---
-        household_totals = merged.groupby(['household_id', food_name_bn_col, food_name_en_col])[nutrient_cols].sum().reset_index()
+        # --- Household × food totals ---
+        household_totals = merged.groupby(
+            ['household_id', food_name_bn_col, food_name_en_col]
+        )[nutrient_cols].sum().reset_index()
 
-        # --- Person-level totals ---
-        person_totals = merged.groupby(['person_id', food_name_bn_col, food_name_en_col])[nutrient_cols].sum().reset_index()
+        # --- Person × food totals ---
+        person_totals = merged.groupby(
+            ['person_id', food_name_bn_col, food_name_en_col]
+        )[nutrient_cols].sum().reset_index()
 
-        st.subheader('Household-level totals')
+        # --- Household overall totals (all foods combined) ---
+        household_overall = merged.groupby(['household_id'])[nutrient_cols].sum().reset_index()
+
+        # --- Person overall totals (all foods combined) ---
+        person_overall = merged.groupby(['person_id'])[nutrient_cols].sum().reset_index()
+
+        st.subheader('Household-level totals (by food)')
         st.dataframe(household_totals.head(50))
 
-        st.subheader('Person-level totals')
+        st.subheader('Person-level totals (by food)')
         st.dataframe(person_totals.head(50))
 
+        st.subheader('Household overall totals')
+        st.dataframe(household_overall.head(50))
+
+        st.subheader('Person overall totals')
+        st.dataframe(person_overall.head(50))
+
         # Download buttons
-        household_csv = household_totals.to_csv(index=False).encode('utf-8')
-        person_csv = person_totals.to_csv(index=False).encode('utf-8')
+        st.download_button('Download Household-level (by food) CSV',
+                           data=household_totals.to_csv(index=False).encode('utf-8'),
+                           file_name='household_totals_by_food.csv', mime='text/csv')
 
-        st.download_button('Download Household-level CSV', data=household_csv, file_name='household_totals.csv', mime='text/csv')
-        st.download_button('Download Person-level CSV', data=person_csv, file_name='person_totals.csv', mime='text/csv')
+        st.download_button('Download Person-level (by food) CSV',
+                           data=person_totals.to_csv(index=False).encode('utf-8'),
+                           file_name='person_totals_by_food.csv', mime='text/csv')
 
-st.caption('This app converts wide-format food data to long format, handles missing codes as 0 (ignored), and outputs two CSVs: household-level totals and person-level totals.')
+        st.download_button('Download Household overall totals CSV',
+                           data=household_overall.to_csv(index=False).encode('utf-8'),
+                           file_name='household_overall_totals.csv', mime='text/csv')
+
+        st.download_button('Download Person overall totals CSV',
+                           data=person_overall.to_csv(index=False).encode('utf-8'),
+                           file_name='person_overall_totals.csv', mime='text/csv')
+
+st.caption('This app converts wide-format food data to long format, handles missing codes as 0 (ignored), and outputs 4 CSVs: household/person × food totals, and household/person overall totals.')
