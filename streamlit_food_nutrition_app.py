@@ -19,8 +19,6 @@ Household, Person_id, food_code1, quantity, food_code2, quantity
 ```
 """)
 
-""")
-
 # --- Upload wide-format CSV ---
 st.header('1) Upload wide-format consumption CSV')
 cons_file = st.file_uploader('Upload your CSV', type=['csv'])
