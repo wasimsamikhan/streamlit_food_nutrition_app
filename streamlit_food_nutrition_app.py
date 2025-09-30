@@ -6,6 +6,9 @@
 import streamlit as st
 import pandas as pd
 
+# --- Make sure pandas shows all columns ---
+pd.set_option("display.max_columns", None)
+
 st.set_page_config(page_title='Wide → Nutrition Mapper', layout='wide')
 st.title('Wide-format Food Data → Nutrition Mapper')
 
@@ -27,7 +30,7 @@ if cons_file:
     df_wide = pd.read_csv(cons_file)
     st.success('CSV loaded successfully')
     st.write('Preview:')
-    st.dataframe(df_wide.head(10))
+    st.dataframe(df_wide.head(10), use_container_width=True)
 else:
     df_wide = None
 
@@ -51,7 +54,7 @@ try:
     mapping_df = mapping_df.dropna(axis=1, how='all')
     st.success('Nutrition mapping loaded successfully')
     st.write('Preview:')
-    st.dataframe(mapping_df.head(10))
+    st.dataframe(mapping_df.head(10), use_container_width=True)
 except Exception as e:
     st.error(f"Failed to load mapping: {e}")
     mapping_df = None
@@ -89,7 +92,7 @@ if df_wide is not None and food_cols and qty_cols:
         df_long = df_long[df_long['food_code'] != 0]
 
         st.success(f'Converted to long format with {len(df_long)} rows')
-        st.dataframe(df_long.head(20))
+        st.dataframe(df_long.head(20), use_container_width=True)
 
 # --- Process and compute ---
 st.header('5) Compute household & person-wise nutrition totals')
@@ -113,37 +116,40 @@ if st.button('Compute results'):
             left_on='food_code', right_on=map_code_col, how='left'
         )
 
+        # Keep quantity (grams) as well
+        merged['grams'] = merged['grams'].astype(float)
+
         # Calculate nutrient intake per row
         for col in nutrient_cols:
-            merged[col] = (merged['grams'].astype(float) / 100.0) * merged[col].astype(float)
+            merged[col] = (merged['grams'] / 100.0) * merged[col].astype(float)
 
-        # --- Household × food totals ---
+        # --- Household × food totals (with grams) ---
         household_totals = merged.groupby(
             ['household_id', food_name_bn_col, food_name_en_col]
-        )[nutrient_cols].sum().reset_index()
+        )[["grams"] + list(nutrient_cols)].sum().reset_index()
 
-        # --- Person × food totals ---
+        # --- Person × food totals (with grams) ---
         person_totals = merged.groupby(
             ['person_id', food_name_bn_col, food_name_en_col]
-        )[nutrient_cols].sum().reset_index()
+        )[["grams"] + list(nutrient_cols)].sum().reset_index()
 
-        # --- Household overall totals (all foods combined) ---
-        household_overall = merged.groupby(['household_id'])[nutrient_cols].sum().reset_index()
+        # --- Household overall totals (all foods combined, with grams) ---
+        household_overall = merged.groupby(['household_id'])[["grams"] + list(nutrient_cols)].sum().reset_index()
 
-        # --- Person overall totals (all foods combined) ---
-        person_overall = merged.groupby(['person_id'])[nutrient_cols].sum().reset_index()
+        # --- Person overall totals (all foods combined, with grams) ---
+        person_overall = merged.groupby(['person_id'])[["grams"] + list(nutrient_cols)].sum().reset_index()
 
         st.subheader('Household-level totals (by food)')
-        st.dataframe(household_totals.head(50))
+        st.dataframe(household_totals.head(50), use_container_width=True)
 
         st.subheader('Person-level totals (by food)')
-        st.dataframe(person_totals.head(50))
+        st.dataframe(person_totals.head(50), use_container_width=True)
 
         st.subheader('Household overall totals')
-        st.dataframe(household_overall.head(50))
+        st.dataframe(household_overall.head(50), use_container_width=True)
 
         st.subheader('Person overall totals')
-        st.dataframe(person_overall.head(50))
+        st.dataframe(person_overall.head(50), use_container_width=True)
 
         # Download buttons
         st.download_button('Download Household-level (by food) CSV',
@@ -162,4 +168,4 @@ if st.button('Compute results'):
                            data=person_overall.to_csv(index=False).encode('utf-8'),
                            file_name='person_overall_totals.csv', mime='text/csv')
 
-st.caption('This app converts wide-format food data to long format, handles missing codes as 0 (ignored), and outputs 4 CSVs: household/person × food totals, and household/person overall totals.')
+st.caption('This app now shows all food items in preview, includes grams (quantity) in all outputs, and provides 4 downloadable CSVs.')
