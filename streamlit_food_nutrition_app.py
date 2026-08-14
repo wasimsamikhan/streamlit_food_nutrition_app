@@ -207,45 +207,45 @@ st.header("3) Nutrition database")
 
 mapping_df = None
 
-try:
+    try:
 
-mapping_df = pd.read_excel(
-    mapping_url,
-    header=0
-)
+    mapping_df = pd.read_excel(
+        mapping_url,
+        header=0
+    )
+    
+    
+    # Remove columns that are completely empty.
+    mapping_df = mapping_df.dropna(
+        axis=1,
+        how="all"
+    )
+    
+    
+    st.success(
+        f"Nutrition Excel loaded successfully: "
+        f"{len(mapping_df):,} food records × "
+        f"{len(mapping_df.columns):,} columns"
+    )
+    
+    
+    st.write("### Nutrition database preview")
+    
+    
+    st.dataframe(
+        mapping_df.head(20),
+        height=500,
+        use_container_width=True
+    )
 
+    except Exception as e:
 
-# Remove columns that are completely empty.
-mapping_df = mapping_df.dropna(
-    axis=1,
-    how="all"
-)
-
-
-st.success(
-    f"Nutrition Excel loaded successfully: "
-    f"{len(mapping_df):,} food records × "
-    f"{len(mapping_df.columns):,} columns"
-)
-
-
-st.write("### Nutrition database preview")
-
-
-st.dataframe(
-    mapping_df.head(20),
-    height=500,
-    use_container_width=True
-)
-
-except Exception as e:
-
-st.error(
-    f"Failed to load nutrition mapping from GitHub: {e}"
-)
-
-
-mapping_df = None
+    st.error(
+        f"Failed to load nutrition mapping from GitHub: {e}"
+    )
+    
+    
+    mapping_df = None
 # ============================================================
 # 4. PROCESS DATA
 # ============================================================
