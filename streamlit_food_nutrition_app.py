@@ -13,10 +13,10 @@ import pandas as pd
 # 2. Average household TOTAL / AEF -> one row per household
 # 3. Person TOTAL across ALL foods -> one row per person
 #
-# Nutrition Excel:
+# Nutrition Excel (verified against the live file):
 #   Column 1 = Food code
-#   Column 2 = English food name
-#   Column 3 = Bengali food name / translation
+#   Column 2 = Bengali food name / translation
+#   Column 3 = English food name
 #   Column 4 onward = nutrient values per 100 g
 # ============================================================
 
@@ -57,20 +57,20 @@ mapping_url = (
     "main/Food%20and%20Nutrition.xlsx"
 )
 
+
+@st.cache_data
+def load_nutrition_db(url):
+    df = pd.read_excel(url, header=0)
+    df = df.dropna(axis=1, how="all")
+    return df
+
+
 st.header("1) Nutrition database")
 
 mapping_df = None
 
 try:
-    mapping_df = pd.read_excel(
-        mapping_url,
-        header=0
-    )
-
-    mapping_df = mapping_df.dropna(
-        axis=1,
-        how="all"
-    )
+    mapping_df = load_nutrition_db(mapping_url)
 
     if len(mapping_df.columns) < 4:
         st.error(
@@ -216,8 +216,8 @@ if st.button(
     # --------------------------------------------------------
 
     map_code_col = mapping.columns[0]
-    food_name_en_col = mapping.columns[1]
-    food_name_bn_col = mapping.columns[2]
+    food_name_bn_col = mapping.columns[1]   # holds the Bengali name
+    food_name_en_col = mapping.columns[2]   # holds the English name
     nutrient_cols = list(mapping.columns[3:])
 
     # --------------------------------------------------------
@@ -242,6 +242,16 @@ if st.button(
     data = data[
         data[food_code_col].notna()
     ].copy()
+
+    # Drop non-whole-number codes instead of crashing on .astype("Int64")
+    non_integer_code = data[food_code_col] % 1 != 0
+
+    if non_integer_code.any():
+        st.warning(
+            f"{non_integer_code.sum():,} rows have a non-whole-number "
+            "Food Code and were dropped."
+        )
+        data = data[~non_integer_code].copy()
 
     data[food_code_col] = (
         data[food_code_col]
@@ -304,7 +314,7 @@ if st.button(
     # --------------------------------------------------------
 
     unmatched = merged[
-        merged[food_name_en_col].isna()
+        merged[map_code_col].isna()
     ]
 
     if len(unmatched) > 0:
@@ -604,7 +614,8 @@ if st.button(
         ),
         data=household_csv,
         file_name="household_total_consumption.csv",
-        mime="text/csv"
+        mime="text/csv",
+        on_click="ignore"
     )
 
     st.download_button(
@@ -614,7 +625,8 @@ if st.button(
         ),
         data=average_household_csv,
         file_name="average_household_consumption.csv",
-        mime="text/csv"
+        mime="text/csv",
+        on_click="ignore"
     )
 
     st.download_button(
@@ -624,7 +636,8 @@ if st.button(
         ),
         data=person_csv,
         file_name="person_total_consumption.csv",
-        mime="text/csv"
+        mime="text/csv",
+        on_click="ignore"
     )
 
 st.markdown("---")
