@@ -229,7 +229,6 @@ if st.button("Compute results", type="primary"):
             merged[col],
             errors="coerce"
         ).fillna(0)
-        )
 
     # -------------------------------------------------
     # HOUSEHOLD TOTAL
