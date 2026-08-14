@@ -133,7 +133,7 @@ if cons_file is not None:
 
 if df_long is not None:
 
-st.header("2) Confirm input columns")
+    st.header("2) Confirm input columns")
 
 
 all_columns = df_long.columns.tolist()
