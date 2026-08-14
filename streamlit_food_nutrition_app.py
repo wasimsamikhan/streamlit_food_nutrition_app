@@ -260,35 +260,35 @@ type="primary"
 # BASIC VALIDATION
 # --------------------------------------------------------
 
-if df_long is None:
+    if df_long is None:
 
-    st.error(
-        "Please upload your CSV file first."
-    )
+        st.error(
+            "Please upload your CSV file first."
+        )
+    
+        st.stop()
 
-    st.stop()
+    if mapping_df is None:
 
-if mapping_df is None:
-
-    st.error(
-        "The nutrition Excel file could not be loaded."
-    )
-
-    st.stop()
+        st.error(
+            "The nutrition Excel file could not be loaded."
+        )
+    
+        st.stop()
 
 # --------------------------------------------------------
 # CHECK THAT THE EXCEL HAS AT LEAST 4 COLUMNS
 # --------------------------------------------------------
 
-if len(mapping_df.columns) < 4:
+    if len(mapping_df.columns) < 4:
 
-    st.error(
-        "The nutrition Excel must contain at least "
-        "four columns: food code, English name, "
-        "translation, and at least one nutrient."
-    )
-
-    st.stop()
+        st.error(
+            "The nutrition Excel must contain at least "
+            "four columns: food code, English name, "
+            "translation, and at least one nutrient."
+        )
+    
+        st.stop()
 
 # --------------------------------------------------------
 # CREATE CLEAN COPY
