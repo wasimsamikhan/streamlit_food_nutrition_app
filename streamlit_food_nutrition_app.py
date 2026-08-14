@@ -89,44 +89,44 @@ df_long = None
 
 if cons_file is not None:
 
-try:
+    try:
 
 
-    df_long = pd.read_csv(cons_file)
+        df_long = pd.read_csv(cons_file)
+    
+    
+        st.success(
+            f"CSV loaded successfully: "
+            f"{len(df_long):,} rows × "
+            f"{len(df_long.columns):,} columns"
+        )
+    
+    
+        st.write("### Uploaded data preview")
+    
+    
+        st.dataframe(
+            df_long.head(50),
+            height=500,
+            use_container_width=True
+        )
+    
+    
+        st.info(
+            f"The uploaded CSV contains {len(df_long):,} rows. "
+            "All rows will be retained during processing."
+        )
+    
+
+    except Exception as e:
 
 
-    st.success(
-        f"CSV loaded successfully: "
-        f"{len(df_long):,} rows × "
-        f"{len(df_long.columns):,} columns"
-    )
-
-
-    st.write("### Uploaded data preview")
-
-
-    st.dataframe(
-        df_long.head(50),
-        height=500,
-        use_container_width=True
-    )
-
-
-    st.info(
-        f"The uploaded CSV contains {len(df_long):,} rows. "
-        "All rows will be retained during processing."
-    )
-
-
-except Exception as e:
-
-
-    st.error(
-        f"Could not read the CSV file: {e}"
-    )
-
-
-    df_long = None
+        st.error(
+            f"Could not read the CSV file: {e}"
+        )
+    
+    
+        df_long = None
 # ============================================================
 # 2. VALIDATE / SELECT INPUT COLUMNS
 # ============================================================
